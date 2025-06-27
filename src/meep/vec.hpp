@@ -662,6 +662,11 @@ public:
     LOOP_OVER_DIRECTIONS(dim, d) result.t[d] *= (1.0 / s);
     return result;
   };
+  vec operator/(vec s) const {
+    vec result = *this;
+    LOOP_OVER_DIRECTIONS(dim, d) result.t[d] *= (1.0 / s.t[d]);
+    return result;
+  };
 
   // I use & as a dot product.
   double operator&(const vec &a) const {

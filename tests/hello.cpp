@@ -1,7 +1,7 @@
 #include <meep.hpp>
 using namespace meep;
 
-double eps(const vec &p);
+realnum eps(const vec &p);
 int main(int argc, char **argv) {
     initialize mpi(argc, argv); // do this even for non-MPI Meep
     double resolution = 20;     // pixels per distance
@@ -22,7 +22,7 @@ int main(int argc, char **argv) {
   
     return 0;
 }
-double eps(const vec &p) {
+realnum eps(const vec &p) {
     if (p.x() < 2 && p.y() < 3)
       return 12.0;
     return 1.0;

@@ -222,7 +222,7 @@ case), which must not contain underscores, for linking with Fortran. */
 #define PACKAGE_NAME "meep"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "meep 1.27.0"
+#define PACKAGE_STRING "meep 1.0.0"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "meep"
@@ -231,13 +231,13 @@ case), which must not contain underscores, for linking with Fortran. */
 #define PACKAGE_URL ""
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "1.27.0"
+#define PACKAGE_VERSION "1.0.0"
 
 /* Define to 1 if you have the ANSI C header files. */
 #define STDC_HEADERS 1
 
 /* Version number of package */
-#define VERSION "1.27.0"
+#define VERSION "1.0.0"
 
 /* define to nothing if C99 _Pragma is not supported */
 /* #undef _Pragma */

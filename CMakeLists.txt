@@ -5,7 +5,7 @@ project(Meep VERSION 1.27.0 LANGUAGES C CXX Fortran) # 假设Meep也用Fortran
 option(BUILD_SHARED_LIBS "Build shared libraries" ON) # CMake默认就是ON，但明确设置更好
 
 # C++11 支持
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # fftw
