@@ -5,6 +5,7 @@
 #include <assert.h>
 #include "material_lib.hpp"
 #include <cstdarg>
+#include <filesystem>
 
 using namespace meep;
 using complexnum = std::complex<realnum>;
@@ -228,6 +229,8 @@ int main(int argc, char** argv)
     grid_volume v = config.create_grid_volume(physical_step);
     material_struct_function func(&config.materials, physical_step);
     structure s(v, func, config.create_boundary_conditions());
+    s.outdir = "/tmp";
+
     fields f(&s);
     bool enable_bloch = false;
     if(enable_bloch){
@@ -242,7 +245,14 @@ int main(int argc, char** argv)
     if(meep::verbosity){
         f.output_hdf5(Dielectric, v.surroundings());
     }
-
+    gaussian_src_time src(config.freq, config.freq, 0.0, 5.0);
+    f.set_boundary(Low, direction::X, boundary_condition::Periodic);
+    f.set_boundary(Low, direction::Y, boundary_condition::Periodic);
+    f.set_boundary(High, direction::X, boundary_condition::Periodic);
+    f.set_boundary(High, direction::Y, boundary_condition::Periodic);
+    f.add_point_source(Ex, src, v.center());
+    if (f.time() < f.last_source_time()) f.step();
+    // add_volume_source
     
     // f.output_hdf5(Ex, v.surroundings());
     // f.output_hdf5(Ey, v.surroundings());
