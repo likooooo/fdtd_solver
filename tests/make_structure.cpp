@@ -184,7 +184,7 @@ public:
         for(; i<n; i++) update(i, p->back());
         verb_printf("make_row_data i=%ld, n=%ld\n", i, n);
     }
-    bool has_conductivity(component c) override {return false;}
+    bool has_conductivity(component c) override {return true;}
     double chi1p1(field_type ft, const vec &r) override
     { 
         return __set_grid_material_impl(r, eps_cutline);
@@ -245,18 +245,19 @@ int main(int argc, char** argv)
     if(meep::verbosity){
         f.output_hdf5(Dielectric, v.surroundings());
     }
-    gaussian_src_time src(config.freq, config.freq, 0.0, 5.0);
+    gaussian_src_time src(config.freq, config.freq);
     f.set_boundary(Low, direction::X, boundary_condition::Periodic);
     f.set_boundary(Low, direction::Y, boundary_condition::Periodic);
     f.set_boundary(High, direction::X, boundary_condition::Periodic);
     f.set_boundary(High, direction::Y, boundary_condition::Periodic);
-    f.add_point_source(Ex, src, v.center());
-    if (f.time() < f.last_source_time()) f.step();
+    f.add_point_source(Ey, src, v.center());
+    while (f.time() < f.last_source_time()) f.step();
     // add_volume_source
     
-    // f.output_hdf5(Ex, v.surroundings());
-    // f.output_hdf5(Ey, v.surroundings());
-    // f.output_hdf5(Ez, v.surroundings());
+    f.output_hdf5(Ex, v.surroundings());
+    f.output_hdf5(Ey, v.surroundings());
+    f.output_hdf5(Ez, v.surroundings());
+    f.output_hdf5(Hz, v.surroundings());
 }
 
 realnum eps(const vec& p){
