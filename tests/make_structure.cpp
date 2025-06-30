@@ -62,8 +62,8 @@ struct user_config
     }
     void set_roi(realnum x0, realnum y0, realnum x1, realnum y1)
     {
-        low = vec(x0, y0);
-        high = vec(x1, y1);
+        low = vec(x0, y0, 0);
+        high = vec(x1, y1, 0);
     }
     material_struct& append_material(complexnum nk, realnum depth)
     {
@@ -220,7 +220,7 @@ int main(int argc, char** argv)
     config.set_lambda(lambda);
     config.PML_thickness = atof(argv[2]);
     double physical_step = atof(argv[3]);
-    config.set_roi(0, 0, lambda * 1, lambda * 1);
+    config.set_roi(0, 0, lambda * 2, lambda * 2);
     verb_printf("Struct\t Epsilon\t Z(from, to)\n");
     for(int i = static_args_size; i < argc; i+= 2){
         const auto& ms =config.append_material(material_lib<realnum>::get(argv[i]), atof(argv[i + 1]));
@@ -246,18 +246,29 @@ int main(int argc, char** argv)
         f.output_hdf5(Dielectric, v.surroundings());
     }
     gaussian_src_time src(config.freq, config.freq);
-    f.set_boundary(Low, direction::X, boundary_condition::Periodic);
-    f.set_boundary(Low, direction::Y, boundary_condition::Periodic);
-    f.set_boundary(High, direction::X, boundary_condition::Periodic);
-    f.set_boundary(High, direction::Y, boundary_condition::Periodic);
-    f.add_point_source(Ey, src, v.center());
-    while (f.time() < f.last_source_time()) f.step();
+    // continuous_src_time src(config.freq, 0, 0, 100);
+    // f.set_boundary(Low, direction::X, boundary_condition::Periodic);
+    // f.set_boundary(Low, direction::Y, boundary_condition::Periodic);
+    // f.set_boundary(High, direction::X, boundary_condition::Periodic);
+    // f.set_boundary(High, direction::Y, boundary_condition::Periodic);
+    vec src_pos = (config.low + config.high)/2;
+    double src_pos_z = config.materials.front().z + config.materials.front().depth / 2;
+    src_pos.set_direction(direction::Z, src_pos_z);
+
+    f.add_point_source(Ey, src, src_pos, v.ntot());
+    while (f.time() < (f.last_source_time())) 
+    f.step();
+    
     // add_volume_source
     
-    f.output_hdf5(Ex, v.surroundings());
-    f.output_hdf5(Ey, v.surroundings());
-    f.output_hdf5(Ez, v.surroundings());
-    f.output_hdf5(Hz, v.surroundings());
+    ivec from = v.little_corner();
+    ivec to = v.big_corner();
+    // from.set_direction(direction::Z, src_pos_z);
+    // to.set_direction(direction::Z, src_pos_z);
+    
+    f.output_hdf5(Ex, volume(v[from], v[to]));
+    f.output_hdf5(Ey, volume(v[from], v[to]));
+    f.output_hdf5(Ez, volume(v[from], v[to]));
 }
 
 realnum eps(const vec& p){
