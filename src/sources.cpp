@@ -85,7 +85,7 @@ complex<double> gaussian_src_time::dipole(double time) const {
 
   // correction factor so that current amplitude (= d(dipole)/dt) is
   // ~ 1 near the peak of the Gaussian.
-  complex<double> amp = 1.0;// / complex<double>(0, -2 * pi * freq);
+  complex<double> amp = 1.0 / complex<double>(0, 2 * pi * freq);
 
   return exp(-tt * tt / (2 * width * width)) * polar(1.0, -2 * pi * freq * tt) * amp;
 }
@@ -114,7 +114,7 @@ complex<double> continuous_src_time::dipole(double time) const {
   if (rtime < start_time || rtime > end_time) return 0.0;
 
   // correction factor so that current amplitude (= d(dipole)/dt) is 1.
-  complex<double> amp = 1.0 / (complex<double>(0, -1.0) * (2 * pi) * freq);
+  complex<double> amp = 1.0 ;/// (complex<double>(0, -1.0) * (2 * pi) * freq);
 
   if (width == 0.0)
     return exp(complex<double>(0, -1.0) * (2 * pi) * freq * time) * amp;

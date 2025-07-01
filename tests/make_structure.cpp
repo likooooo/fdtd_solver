@@ -53,8 +53,13 @@ namespace meep_geom
 struct user_config
 {
     realnum freq;
-    double PML_thickness;
+    realnum PML_thickness;
     vec low, high;
+    //== 传播方向
+    vec k0{vec(0, 0, 1)};
+    //== 震动方向
+    std::array<std::complex<realnum>, 3> Exyz{0, 1, 0}; // total Y-polarization
+
     std::vector<material_struct> materials;
     std::vector<meep_geom::geometric_object_list_raii> geo_objects;
     void set_lambda(realnum lambda){
@@ -135,8 +140,6 @@ void verb_printf(const char *fmt, ...)
     va_end(ap);
 }
 
-realnum eps(const vec &p);
-
 class material_struct_function : public material_function
 {
     const std::vector<material_struct>* p;
@@ -210,7 +213,16 @@ private:
         return cutline.back();
     }
 };
-
+std::complex<double> component_fun_abs_arg(const std::complex<realnum> *fields, const vec &loc, void *data_)
+{
+    return std::complex(std::abs(fields[0]), std::arg(fields[0]));
+}
+std::complex<double> src_phase_function(const vec &p, direction dir)
+{
+    // printf("%f\t%f\t%f\n", p.x(), p.y(), p.z());
+    double theta = 2.0 * M_PI * config.freq * 1 * config.k0.in_direction(dir);
+    return std::exp(std::complex<double>(0.0, theta));
+}
 int meep::verbosity = 1;
 int main(int argc, char** argv)
 {
@@ -232,7 +244,7 @@ int main(int argc, char** argv)
     s.outdir = "/tmp";
 
     fields f(&s);
-    bool enable_bloch = false;
+    bool enable_bloch = true;
     if(enable_bloch){
         double alpha = 0, beta = 0;
         double kx = config.freq * alpha;
@@ -242,36 +254,43 @@ int main(int argc, char** argv)
         f.use_bloch(direction::Y, ky);
     }
 
-    if(meep::verbosity){
-        f.output_hdf5(Dielectric, v.surroundings());
-    }
     gaussian_src_time src(config.freq, config.freq);
-    // continuous_src_time src(config.freq, 0, 0, 100);
-    // f.set_boundary(Low, direction::X, boundary_condition::Periodic);
-    // f.set_boundary(Low, direction::Y, boundary_condition::Periodic);
-    // f.set_boundary(High, direction::X, boundary_condition::Periodic);
-    // f.set_boundary(High, direction::Y, boundary_condition::Periodic);
+    realnum intergral = std::sqrt(2 * M_PI) * lambda;
     vec src_pos = (config.low + config.high)/2;
     double src_pos_z = config.materials.front().z + config.materials.front().depth / 2;
     src_pos.set_direction(direction::Z, src_pos_z);
-
-    f.add_point_source(Ey, src, src_pos, v.ntot());
-    while (f.time() < (f.last_source_time())) 
-    f.step();
-    
-    // add_volume_source
-    
-    ivec from = v.little_corner();
-    ivec to = v.big_corner();
-    // from.set_direction(direction::Z, src_pos_z);
-    // to.set_direction(direction::Z, src_pos_z);
-    
-    f.output_hdf5(Ex, volume(v[from], v[to]));
-    f.output_hdf5(Ey, volume(v[from], v[to]));
-    f.output_hdf5(Ez, volume(v[from], v[to]));
-}
-
-realnum eps(const vec& p){
-    printf("%f\t%f\t%f\n", p.x(), p.y(), p.z());
-    return 1.0;
+    component src_component = Ey;
+    vec from = config.low;
+    from.set_direction(direction::Z, src_pos_z);
+    vec to = config.high;
+    to.set_direction(direction::Z, src_pos_z);
+    {
+        f.add_volume_source(Ey, src, volume(from, to), 
+            [](const vec & p){return src_phase_function(p, direction::Z);}, config.Exyz.at(Y) / intergral
+        );
+    }
+    std::array<component,3> k_components {meep::component::Ex, meep::component::Ey, meep::component::Ez};
+    from.set_direction(direction::Z, src_pos_z + 1 * lambda);
+    to.set_direction(direction::Z, src_pos_z +   1 * lambda);
+    dft_fields monitor = f.add_dft_fields(
+        k_components.data(), k_components.size(), 
+        volume(from, to), std::vector<double>{config.freq}, true
+    );
+    while (f.time() < (f.last_source_time())) f.step();
+    size_t dims[3];
+    meep::direction directions[3];
+    int rank = f.get_array_slice_dimensions(monitor.where, dims, directions, true);
+    std::array<complexnum*, 3> final_exyz;
+    for(size_t i = 0; i < k_components.size(); i++){
+        // f.output_hdf5(k_components.at(i), v.surroundings());
+        // f.output_hdf5((std::string(component_name(k_components.at(i))) + std::string("_abs_ang")).c_str(), 1, &k_components.at(i), 
+        //     component_fun_abs_arg, nullptr, v.surroundings()
+        // );
+        final_exyz.at(i) = f.get_dft_array(monitor, k_components.at(i), 0, &rank, dims);
+    }
+    if(meep::verbosity){
+        f.output_hdf5(Dielectric, v.surroundings());
+    }
+    for(size_t i = 0; i < 100; i +=10)
+        printf("%ld %f, %f(degree)\n", i, std::abs(final_exyz.at(1)[i]), 180.0 / M_PI * std::arg(final_exyz.at(1)[i]));
 }
